@@ -118,12 +118,9 @@ function cleanup () {
   }
 }
 
-async function main () {
-  console.log(`ID: ${lines[0]}`)
-  cleanup()
-  download()
-  slice()
-  render()
-}
+console.log(`ID: ${lines[0]}`)
 
-main()
+cleanup()
+download()
+slice()
+render()
