@@ -6,7 +6,7 @@
 // This is a way program that
 
 // Instructions reside in instructions.txt
-// The first line is the ID of the video
+// The first line is the URL or ID of the video
 // The next lines are pairs of the number
 // plus the duration in seconds
 // For instance '4 2' would mean:
@@ -36,6 +36,9 @@
 // render: Where the final output gets saved
 // The output file is {id}.mp3
 
+// There is a special string 'rand'
+// which produces random % and/or durations
+
 // Dependencies
 //--------------------------
 // - youtube-dl
@@ -49,9 +52,27 @@ const execSync = require("child_process").execSync
 const lines = fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
 const slices = {}
 const slice_list = []
+let id = ""
+
+function get_youtube_id (url) {
+  let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
+  let id = undefined !== split[2] ? split[2].split(/[^0-9a-z_\-]/i)[0] : split[0]
+  return id.length === 11 ? id : false
+}
+
+function get_id () {
+  if (lines[0].length === 11) {
+    id = lines[0]
+  } else {
+    id = get_youtube_id(lines[0])
+    if (!id) {
+      console.log("Invalid YouTube video ID")
+      process.exit(1)
+    }
+  }
+}
 
 function download () {
-  let id = lines[0]
   if (fs.existsSync(`downloads/${id}.mp3`)) {
     console.log("Using cache...")
   } else {
@@ -60,15 +81,18 @@ function download () {
   }
 }
 
+function random_float (min, max) {
+  return parseFloat(Math.random() * (max - min + 1) + min.toFixed(1))
+}
+
 function slice () {
   console.log("Creating slices...")
-  let id = lines[0]
   let total_duration = parseInt(execSync(`mp3info -p "%S\n" downloads/${id}.mp3`))
   console.log(`Total duration: ${total_duration}`)
   let nslice = 1
 
   for (let line of lines.slice(1)) {
-    let instruction = line.trim()
+    let instruction = line.trim().toLowerCase()
   
     if (!instruction) {
       continue
@@ -76,8 +100,10 @@ function slice () {
 
     console.log(`Processing: ${instruction}`)
     let split = instruction.split(" ")
-    let percentage = parseFloat(split[0])
-    let duration = parseFloat(split[1])
+    let item1 = split[0].trim()
+    let item2 = split[1].trim()
+    let percentage = item1 === "rand" ? random_float(0, 9) : parseFloat(split[0])
+    let duration = item2 === "rand" ? random_float(0.1, 5) : parseFloat(split[1])
     let slice_id = `${percentage} - ${duration}`
     
     if (slices[slice_id]) {
@@ -104,7 +130,6 @@ function slice () {
 
 function render () {
   console.log("Rendering...")
-  let id = lines[0]
   execSync(`sox ${slice_list.join(" ")} render/${id}.mp3`)
   console.log(`Output saved in render/${id}.mp3`)
 }
@@ -121,6 +146,7 @@ function cleanup () {
 console.log(`ID: ${lines[0]}`)
 
 cleanup()
+get_id()
 download()
 slice()
 render()
