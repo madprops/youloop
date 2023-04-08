@@ -153,9 +153,8 @@ function render () {
   }
 
   let echo = slices.map(x => `file '${x}'`).join("\\n")
-  console.log(echo)
   let file_name = `render/${Date.now()}_${id}.mp4`
-  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
+  execSync(`echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
   console.log(`Output saved in ${file_name}`)
 }
 
