@@ -28,13 +28,12 @@
 // The video is cached to minimize downloads
 // Then it uses ffmpeg to create the slices
 // It detects when slices can be reused
-// Then ffmpeg joins the slices into an mp4
+// Then ffmpeg joins the slices into a final video
 
 // Directories:
 // downloads: Where youtube videos are cached
 // slices: Where temporary slices are stored
 // render: Where the final output gets saved
-// The output file is {id}.mp4
 
 // There is a special string 'rand'
 // which produces random % and/or durations
@@ -45,136 +44,146 @@
 // - ffmpeg
 // -------------------------
 
-const fs = require("fs")
-const path = require("path")
-const execSync = require("child_process").execSync
-const lines = fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
-const slices = {}
-const slice_list = []
-let id = ""
+const App = {}
+App.i = {}
 
-function get_youtube_id (url) {
+App.i.fs = require("fs")
+App.i.path = require("path")
+App.i.execSync = require("child_process").execSync
+App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
+App.slices = {}
+App.slice_list = []
+
+App.get_youtube_id = function (url) {
   let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
   let id = undefined !== split[2] ? split[2].split(/[^0-9a-z_\-]/i)[0] : split[0]
   return id.length === 11 ? id : false
 }
 
-function get_id () {
-  if (lines[0].length === 11) {
-    id = lines[0]
-  } else {
-    id = get_youtube_id(lines[0])
+App.prepare = function () {
+  if (App.instructions[0].length === 11) {
+    App.id = App.instructions[0]
+  } 
+  else {
+    App.id = get_youtube_id(App.instructions[0])
+
     if (!id) {
-      console.log("Invalid YouTube video ID")
+      console.info("Invalid YouTube video ID")
       process.exit(1)
     }
   }
 }
 
-function get_cache () {
-  let files = fs.readdirSync("downloads/")
+App.get_cache = function () {
+  let files = App.i.fs.readdirSync("downloads/")
   
   for (let file of files) {
-    if (file.startsWith(id)) {
-      let f = path.join("downloads/", file)
-      return path.join(path.dirname(__filename), f)
+    if (file.startsWith(App.id)) {
+      let f = App.i.path.join("downloads/", file)
+      App.cache = App.i.path.join(App.i.path.dirname(__filename), f)
+    }
+  }  
+}
+
+App.download = function () {
+  App.get_cache()
+
+  if (App.cache) {
+    console.info("Using cache...")
+  } 
+  else {
+    console.info("Downloading...")
+    App.i.execSync(`yt-dlp -f "bestvideo+bestaudio/bestvideo" --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${App.id}`)
+    App.get_cache()
+
+    if (!App.cache) {
+      process.exit(1)
     }
   }
 }
 
-function download () {
-  if (get_cache()) {
-    console.log("Using cache...")
-  } else {
-    console.log("Downloading...")
-    execSync(`yt-dlp -f "bestvideo+bestaudio/bestvideo" --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
-  }
-}
-
-function random_float (min, max) {
+App.random_float = function (min, max) {
   return parseFloat(Math.random() * (max - min + 1) + min.toFixed(1))
 }
 
-function slice () {
-  console.log("Creating slices...")
-  let cache = get_cache()
-  let total_duration = parseInt(execSync(`ffprobe ${cache} -show_format 2>&1 | sed -n 's/duration=//p'`))
+App.slice = function () {
+  console.info("Creating slices...")
+  let total_duration = parseInt(App.i.execSync(`ffprobe ${App.cache} -show_format 2>&1 | sed -n 's/duration=//p'`))
   let nslice = 1
 
-  for (let line of lines.slice(1)) {
-    let instruction = line.trim().toLowerCase()
+  for (let ins of App.instructions.slice(1)) {
+    let instruction = ins.trim().toLowerCase()
   
     if (!instruction) {
       continue
     }
 
-    console.log(`Processing: ${instruction}`)
+    console.info(`Processing: ${instruction}`)
     let split = instruction.split(" ")
     let item1 = split[0].trim()
     let item2 = split[1].trim()
-    let percentage = item1 === "rand" ? random_float(0, 9) : parseFloat(split[0])
-    let duration = item2 === "rand" ? random_float(0.1, 5) : parseFloat(split[1])
+    let percentage = item1 === "rand" ? App.random_float(0, 9) : parseFloat(split[0])
+    let duration = item2 === "rand" ? App.random_float(0.1, 5) : parseFloat(split[1])
     let slice_id = `${percentage} - ${duration}`
     
-    if (slices[slice_id]) {
-      console.log("Reusing slice...")
-      slice_list.push(`slices/${slices[slice_id]}.mp4`)
-    } else {
+    if (App.slices[slice_id]) {
+      console.info("Reusing slice...")
+      App.slice_list.push(`slices/${App.slices[slice_id]}.mp4`)
+    } 
+    else {
       let start_seconds
+
       if (percentage > 0) {
         if (percentage > 9) percentage = 9
         start_seconds = total_duration * ((percentage * 10) / 100)
         start_seconds = parseFloat(start_seconds.toFixed(3))
-      } else {
+      } 
+      else {
         start_seconds = 0
       }
 
-      console.log(`Start: ${start_seconds} seconds | Duration: ${duration}`)
-      execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${cache} -y slices/${nslice}.mp4`)
-      slices[slice_id] = nslice
-      slice_list.push(`slices/${nslice}.mp4`)
+      console.info(`Start: ${start_seconds} seconds | Duration: ${duration}`)
+      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -y slices/${nslice}.mp4`)
+      App.slices[slice_id] = nslice
+      App.slice_list.push(`slices/${nslice}.mp4`)
       nslice += 1
     }
   }
 }
 
-function render () {
-  console.log("Rendering...")
-
-  let slices = []
-  let files = fs.readdirSync("slices/")
+App.render = function () {
+  console.info("Rendering...")
+  let paths = []
   
-  for (let file of files) {
+  for (let file of App.i.fs.readdirSync("slices/")) {
     if (file.endsWith(".mp4")) {
-      let f = path.join("slices/", file)
-      f = path.join(path.dirname(__filename), f)
-      slices.push(f)
+      let f = App.i.path.join("slices/", file)
+      f = App.i.path.join(App.i.path.dirname(__filename), f)
+      paths.push(f)
     }
   }
 
-  let echo = slices.map(x => `file '${x}'`).join("\\n")
-  let file_name = `render/${Date.now()}_${id}.mp4`
-  execSync(`echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
-  console.log(`Output saved in ${file_name}`)
+  let echo = paths.map(x => `file '${x}'`).join("\\n")
+  let file_name = `render/${Date.now()}_${App.id}.mp4`
+  App.i.execSync(`echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
+  console.info(`Output saved in ${file_name}`)
 }
 
-function cleanup () {
-  console.log("Cleaning up...")
+App.cleanup = function () {
+  console.info("Cleaning up...")
   
-  let files = fs.readdirSync("slices/")
-  
-  for (let file of files) {
+  for (let file of App.i.fs.readdirSync("slices/")) {
     if (file.startsWith(".")) continue
-    let f = path.join("slices/", file)
-    f = path.join(path.dirname(__filename), f)
-    fs.unlinkSync(f)
+    let f = App.i.path.join("slices/", file)
+    f = App.i.path.join(App.i.path.dirname(__filename), f)
+    App.i.fs.unlinkSync(f)
   }
 }
 
-console.log(`ID: ${lines[0]}`)
+console.info(`ID: ${App.instructions[0]}`)
 
-cleanup()
-get_id()
-download()
-slice()
-render()
+App.cleanup()
+App.prepare()
+App.download()
+App.slice()
+App.render()
