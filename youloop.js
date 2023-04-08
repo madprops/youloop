@@ -142,7 +142,7 @@ function render () {
 
   let echo = slices.map(x => `file '${x}'`).join("\\n")
   console.log(echo)
-  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -c copy -y render/${id}.webm`)
+  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -y render/${id}.webm`)
   console.log(`Output saved in render/${id}.webm`)
 }
 
