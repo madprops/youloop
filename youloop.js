@@ -6,14 +6,13 @@
 // This is a way program that
 
 // Instructions reside in instructions.txt
-// The first line is the URL or ID of the video
-// The next lines are pairs of the number
-// plus the duration in seconds
+// Each line is a pairs of numbers
+// The percentage and the duration
 // For instance '4 2' would mean:
 // Slice starts at 40% and is 2 seconds long
+// Durations might not be exact
 
 // Sample instructions.txt:
-// Wx6S6JPwzbU
 // 1 1
 // 1 1
 // 1 4
