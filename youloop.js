@@ -53,7 +53,6 @@ App.i.execSync = require("child_process").execSync
 App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
 App.slices = {}
 App.slice_list = []
-App.ext = "mp4"
 
 App.get_youtube_id = function (url) {
   let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
@@ -82,6 +81,7 @@ App.get_cache = function () {
     if (file.startsWith(App.id)) {
       let f = App.i.path.join("downloads/", file)
       App.cache = App.i.path.join(App.i.path.dirname(__filename), f)
+      App.ext = file.split(".").slice(-1)[0]
     }
   }  
 }
@@ -144,7 +144,7 @@ App.slice = function () {
       }
 
       console.info(`Start: ${start_seconds} seconds | Duration: ${duration}`)
-      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -y slices/${nslice}.${App.ext}`)
+      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -c copy -y slices/${nslice}.${App.ext}`)
       App.slices[slice_id] = nslice
       App.slice_list.push(`slices/${nslice}.${App.ext}`)
       nslice += 1
