@@ -54,6 +54,10 @@ App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().spli
 App.slices = {}
 App.slice_list = []
 
+App.exit = function () {
+  process.exit(1)
+}
+ 
 App.get_youtube_id = function (url) {
   let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
   let id = undefined !== split[2] ? split[2].split(/[^0-9a-z_\-]/i)[0] : split[0]
@@ -61,17 +65,25 @@ App.get_youtube_id = function (url) {
 }
 
 App.prepare = function () {
-  if (App.instructions[0].length === 11) {
-    App.id = App.instructions[0]
+  let url = process.argv[2]
+
+  if (!url) {
+    App.exit()
+  }
+
+  if (url.length === 11) {
+    App.id = url
   } 
   else {
-    App.id = App.get_youtube_id(App.instructions[0])
+    App.id = App.get_youtube_id(url)
 
     if (!App.id) {
       console.info("Invalid YouTube video ID")
-      process.exit(1)
+      App.exit()
     }
   }
+
+  console.info(`ID: ${App.id}`)
 }
 
 App.get_cache = function () {
@@ -98,7 +110,7 @@ App.download = function () {
     App.get_cache()
 
     if (!App.cache) {
-      process.exit(1)
+      App.exit()
     }
   }
 }
@@ -112,7 +124,7 @@ App.slice = function () {
   let total_duration = parseInt(App.i.execSync(`ffprobe ${App.cache} -show_format 2>&1 | sed -n 's/duration=//p'`))
   let nslice = 1
 
-  for (let ins of App.instructions.slice(1)) {
+  for (let ins of App.instructions) {
     let instruction = ins.trim().toLowerCase()
   
     if (!instruction) {
@@ -181,10 +193,8 @@ App.cleanup = function () {
   }
 }
 
-console.info(`Video: ${App.instructions[0]}`)
-
-App.cleanup()
 App.prepare()
+App.cleanup()
 App.download()
 App.slice()
 App.render()
