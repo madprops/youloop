@@ -153,7 +153,9 @@ function cleanup () {
   
   for (const file of files) {
     if (file.startsWith(".")) continue
-    fs.unlinkSync(path.join("slices/", file))
+    let f = path.join("slices/", file)
+    f = path.join(path.dirname(__filename), f)
+    fs.unlinkSync(f)
   }
 }
 
