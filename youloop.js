@@ -23,18 +23,18 @@
 // create the slices and render the output
 // The slices dir is emptied automatically at launch
 
-// This works by downloading the mp3 audio of the videos
+// This works by downloading the youtube videos
 // yt-dlp is used for that
-// The audio is cached to minimize downloads
+// The video is cached to minimize downloads
 // Then it uses ffmpeg to create the slices
 // It detects when slices can be reused
-// Then it uses sox to concatenate the slices
+// Then ffmpeg joins the slices into an webm
 
 // Directories:
-// downloads: Where youtube audio is cached
+// downloads: Where youtube videos are cached
 // slices: Where temporary slices are stored
 // render: Where the final output gets saved
-// The output file is {id}.mp3
+// The output file is {id}.webm
 
 // There is a special string 'rand'
 // which produces random % and/or durations
@@ -43,7 +43,6 @@
 //--------------------------
 // - yt-dlp
 // - ffmpeg
-// - sox with libsox-fmt-mp3
 // -------------------------
 
 const fs = require("fs")
@@ -73,11 +72,11 @@ function get_id () {
 }
 
 function download () {
-  if (fs.existsSync(`downloads/${id}.mp3`)) {
+  if (fs.existsSync(`downloads/${id}.webm`)) {
     console.log("Using cache...")
   } else {
     console.log("Downloading...")
-    execSync(`yt-dlp -x --audio-format mp3 --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
+    execSync(`yt-dlp --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
   }
 }
 
@@ -87,8 +86,7 @@ function random_float (min, max) {
 
 function slice () {
   console.log("Creating slices...")
-  let total_duration = parseInt(execSync(`mp3info -p "%S\n" downloads/${id}.mp3`))
-  console.log(`Total duration: ${total_duration}`)
+  let total_duration = parseInt(execSync(`ffprobe downloads/${id}.webm -show_format 2>&1 | sed -n 's/duration=//p'`))
   let nslice = 1
 
   for (let line of lines.slice(1)) {
@@ -108,7 +106,7 @@ function slice () {
     
     if (slices[slice_id]) {
       console.log("Reusing slice...")
-      slice_list.push(`slices/${slices[slice_id]}.mp3`)
+      slice_list.push(`slices/${slices[slice_id]}.webm`)
     } else {
       let start_seconds
       if (percentage > 0) {
@@ -119,10 +117,10 @@ function slice () {
         start_seconds = 0
       }
 
-      console.log(`Start: ${start_seconds} seconds`)
-      execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i downloads/${id}.mp3 slices/${nslice}.mp3`)
+      console.log(`Start: ${start_seconds} seconds | Duration: ${duration}`)
+      execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i downloads/${id}.webm -y slices/${nslice}.webm`)
       slices[slice_id] = nslice
-      slice_list.push(`slices/${nslice}.mp3`)
+      slice_list.push(`slices/${nslice}.webm`)
       nslice += 1
     }
   }
@@ -130,13 +128,29 @@ function slice () {
 
 function render () {
   console.log("Rendering...")
-  execSync(`sox ${slice_list.join(" ")} render/${id}.mp3`)
-  console.log(`Output saved in render/${id}.mp3`)
+
+  let slices = []
+  let files = fs.readdirSync("slices/")
+  
+  for (const file of files) {
+    if (file.endsWith(".webm")) {
+      let f = path.join("slices/", file)
+      f = path.join(path.dirname(__filename), f)
+      slices.push(f)
+    }
+  }
+
+  let echo = slices.map(x => `file '${x}'`).join("\\n")
+  console.log(echo)
+  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -c copy -y render/${id}.webm`)
+  console.log(`Output saved in render/${id}.webm`)
 }
 
 function cleanup () {
   console.log("Cleaning up...")
+  
   let files = fs.readdirSync("slices/")
+  
   for (const file of files) {
     if (file.startsWith(".")) continue
     fs.unlinkSync(path.join("slices/", file))
