@@ -66,9 +66,9 @@ App.prepare = function () {
     App.id = App.instructions[0]
   } 
   else {
-    App.id = get_youtube_id(App.instructions[0])
+    App.id = App.get_youtube_id(App.instructions[0])
 
-    if (!id) {
+    if (!App.id) {
       console.info("Invalid YouTube video ID")
       process.exit(1)
     }
@@ -94,7 +94,7 @@ App.download = function () {
   } 
   else {
     console.info("Downloading...")
-    App.i.execSync(`yt-dlp -f "bestvideo+bestaudio/bestvideo" --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${App.id}`)
+    App.i.execSync(`yt-dlp --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${App.id}`)
     App.get_cache()
 
     if (!App.cache) {
@@ -181,7 +181,7 @@ App.cleanup = function () {
   }
 }
 
-console.info(`ID: ${App.instructions[0]}`)
+console.info(`Video: ${App.instructions[0]}`)
 
 App.cleanup()
 App.prepare()
