@@ -14,8 +14,15 @@
 
 // Sample instructions.txt:
 // 1 1
-// 1 1
-// 1 4
+// 4 5
+// 2 4
+// 1 2
+
+// Or if you want it to be completely random
+// rand 2
+// rand 1
+// rand 5
+// rand 1
 
 // Then you just run this program
 // and it will read the instructions
