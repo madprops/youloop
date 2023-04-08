@@ -24,7 +24,7 @@
 // The slices dir is emptied automatically at launch
 
 // This works by downloading the mp3 audio of the videos
-// youtube-dl is used for that
+// yt-dlp is used for that
 // The audio is cached to minimize downloads
 // Then it uses ffmpeg to create the slices
 // It detects when slices can be reused
@@ -41,7 +41,7 @@
 
 // Dependencies
 //--------------------------
-// - youtube-dl
+// - yt-dlp
 // - ffmpeg
 // - sox with libsox-fmt-mp3
 // -------------------------
@@ -77,7 +77,7 @@ function download () {
     console.log("Using cache...")
   } else {
     console.log("Downloading...")
-    execSync(`youtube-dl -x --audio-format mp3 --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
+    execSync(`yt-dlp -x --audio-format mp3 --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
   }
 }
 
