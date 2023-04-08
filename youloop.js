@@ -53,6 +53,7 @@ App.i.execSync = require("child_process").execSync
 App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
 App.slices = {}
 App.slice_list = []
+App.ext = "mp4"
 
 App.get_youtube_id = function (url) {
   let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
@@ -128,7 +129,7 @@ App.slice = function () {
     
     if (App.slices[slice_id]) {
       console.info("Reusing slice...")
-      App.slice_list.push(`slices/${App.slices[slice_id]}.mp4`)
+      App.slice_list.push(`slices/${App.slices[slice_id]}.${App.ext}`)
     } 
     else {
       let start_seconds
@@ -143,9 +144,9 @@ App.slice = function () {
       }
 
       console.info(`Start: ${start_seconds} seconds | Duration: ${duration}`)
-      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -y slices/${nslice}.mp4`)
+      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -y slices/${nslice}.${App.ext}`)
       App.slices[slice_id] = nslice
-      App.slice_list.push(`slices/${nslice}.mp4`)
+      App.slice_list.push(`slices/${nslice}.${App.ext}`)
       nslice += 1
     }
   }
@@ -156,7 +157,7 @@ App.render = function () {
   let paths = []
   
   for (let file of App.i.fs.readdirSync("slices/")) {
-    if (file.endsWith(".mp4")) {
+    if (file.endsWith(App.ext)) {
       let f = App.i.path.join("slices/", file)
       f = App.i.path.join(App.i.path.dirname(__filename), f)
       paths.push(f)
@@ -164,7 +165,7 @@ App.render = function () {
   }
 
   let echo = paths.map(x => `file '${x}'`).join("\\n")
-  let file_name = `render/${Date.now()}_${App.id}.mp4`
+  let file_name = `render/${Date.now()}_${App.id}.${App.ext}`
   App.i.execSync(`echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
   console.info(`Output saved in ${file_name}`)
 }
