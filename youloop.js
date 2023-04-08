@@ -28,13 +28,13 @@
 // The video is cached to minimize downloads
 // Then it uses ffmpeg to create the slices
 // It detects when slices can be reused
-// Then ffmpeg joins the slices into an webm
+// Then ffmpeg joins the slices into an mp4
 
 // Directories:
 // downloads: Where youtube videos are cached
 // slices: Where temporary slices are stored
 // render: Where the final output gets saved
-// The output file is {id}.webm
+// The output file is {id}.mp4
 
 // There is a special string 'rand'
 // which produces random % and/or durations
@@ -71,12 +71,23 @@ function get_id () {
   }
 }
 
+function get_cache () {
+  let files = fs.readdirSync("downloads/")
+  
+  for (let file of files) {
+    if (file.startsWith(id)) {
+      let f = path.join("downloads/", file)
+      return path.join(path.dirname(__filename), f)
+    }
+  }
+}
+
 function download () {
-  if (fs.existsSync(`downloads/${id}.webm`)) {
+  if (get_cache()) {
     console.log("Using cache...")
   } else {
     console.log("Downloading...")
-    execSync(`yt-dlp --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
+    execSync(`yt-dlp -f "bestvideo+bestaudio/bestvideo" --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${id}`)
   }
 }
 
@@ -86,7 +97,8 @@ function random_float (min, max) {
 
 function slice () {
   console.log("Creating slices...")
-  let total_duration = parseInt(execSync(`ffprobe downloads/${id}.webm -show_format 2>&1 | sed -n 's/duration=//p'`))
+  let cache = get_cache()
+  let total_duration = parseInt(execSync(`ffprobe ${cache} -show_format 2>&1 | sed -n 's/duration=//p'`))
   let nslice = 1
 
   for (let line of lines.slice(1)) {
@@ -106,7 +118,7 @@ function slice () {
     
     if (slices[slice_id]) {
       console.log("Reusing slice...")
-      slice_list.push(`slices/${slices[slice_id]}.webm`)
+      slice_list.push(`slices/${slices[slice_id]}.mp4`)
     } else {
       let start_seconds
       if (percentage > 0) {
@@ -118,9 +130,9 @@ function slice () {
       }
 
       console.log(`Start: ${start_seconds} seconds | Duration: ${duration}`)
-      execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i downloads/${id}.webm -y slices/${nslice}.webm`)
+      execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${cache} -y slices/${nslice}.mp4`)
       slices[slice_id] = nslice
-      slice_list.push(`slices/${nslice}.webm`)
+      slice_list.push(`slices/${nslice}.mp4`)
       nslice += 1
     }
   }
@@ -132,8 +144,8 @@ function render () {
   let slices = []
   let files = fs.readdirSync("slices/")
   
-  for (const file of files) {
-    if (file.endsWith(".webm")) {
+  for (let file of files) {
+    if (file.endsWith(".mp4")) {
       let f = path.join("slices/", file)
       f = path.join(path.dirname(__filename), f)
       slices.push(f)
@@ -142,8 +154,9 @@ function render () {
 
   let echo = slices.map(x => `file '${x}'`).join("\\n")
   console.log(echo)
-  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -y render/${id}.webm`)
-  console.log(`Output saved in render/${id}.webm`)
+  let file_name = `render/${Date.now()}_${id}.mp4`
+  execSync(`echo -e "${echo}" | ffmpeg -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
+  console.log(`Output saved in ${file_name}`)
 }
 
 function cleanup () {
@@ -151,7 +164,7 @@ function cleanup () {
   
   let files = fs.readdirSync("slices/")
   
-  for (const file of files) {
+  for (let file of files) {
     if (file.startsWith(".")) continue
     let f = path.join("slices/", file)
     f = path.join(path.dirname(__filename), f)
