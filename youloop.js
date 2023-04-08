@@ -18,11 +18,12 @@
 // 2 4
 // 1 2
 
-// Or if you want it to be completely random
-// rand 2
+// There is a special string 'rand'
+// which produces random % and/or durations:
+// rand rand
 // rand 1
-// rand 5
-// rand 1
+// rand rand
+// rand 3
 
 // Then you just run this program
 // and it will read the instructions
@@ -40,9 +41,6 @@
 // downloads: Where youtube videos are cached
 // slices: Where temporary slices are stored
 // render: Where the final output gets saved
-
-// There is a special string 'rand'
-// which produces random % and/or durations
 
 // Dependencies
 //--------------------------
