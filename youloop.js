@@ -18,7 +18,7 @@
 // 2 4
 // 1 2
 
-// There is a special string 'rand'
+// There is a special string "rand"
 // which produces random % and/or durations:
 // rand rand
 // rand 1
