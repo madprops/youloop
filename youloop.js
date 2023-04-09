@@ -95,6 +95,10 @@ App.get_cache = function () {
   
   for (let file of files) {
     if (file.startsWith(App.id)) {
+      if (file.endsWith(".part") || file.endsWith(".ytdl")) {
+        return
+      }
+      
       let f = App.i.path.join("downloads/", file)
       App.cache = App.i.path.join(App.i.path.dirname(__filename), f)
       App.ext = file.split(".").slice(-1)[0]
