@@ -1,5 +1,4 @@
-const App = {}
-App.i = {}
+const App = {}; App.i = {}
 
 App.i.fs = require("fs")
 App.i.path = require("path")
