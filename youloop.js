@@ -8,11 +8,35 @@ App.slices = {}
 App.exit = function () {
   process.exit(1)
 }
+
+App.get_path = function (dir) {
+  return App.i.path.join(App.i.path.dirname(__filename), dir)
+}
+
+App.random_float = function (min, max) {
+  return parseFloat(Math.random() * (max - min + 1) + min.toFixed(1))
+}
  
 App.get_youtube_id = function (url) {
   let split = url.split(/(vi\/|v%3D|v=|\/v\/|youtu\.be\/|\/embed\/)/)
   let id = undefined !== split[2] ? split[2].split(/[^0-9a-z_\-]/i)[0] : split[0]
   return id.length === 11 ? id : false
+}
+
+App.get_cache = function () {
+  let downloads_path = App.get_path("downloads")
+  let files = App.i.fs.readdirSync(downloads_path)
+  
+  for (let file of files) {
+    if (file.startsWith(App.id)) {
+      if (file.endsWith(".part") || file.endsWith(".ytdl")) {
+        return
+      }
+
+      App.cache = App.i.path.join(downloads_path, file)
+      App.ext = file.split(".").slice(-1)[0]
+    }
+  }  
 }
 
 App.prepare = function () {
@@ -38,20 +62,14 @@ App.prepare = function () {
   App.instructions = App.i.fs.readFileSync(App.get_path("instructions.txt"), "utf8").trim().split("\n")  
 }
 
-App.get_cache = function () {
-  let downloads_path = App.get_path("downloads")
-  let files = App.i.fs.readdirSync(downloads_path)
-  
-  for (let file of files) {
-    if (file.startsWith(App.id)) {
-      if (file.endsWith(".part") || file.endsWith(".ytdl")) {
-        return
-      }
+App.cleanup = function () {
+  console.info("Cleaning up...")
+  let slices_path = App.get_path("slices")
 
-      App.cache = App.i.path.join(downloads_path, file)
-      App.ext = file.split(".").slice(-1)[0]
-    }
-  }  
+  for (let file of App.i.fs.readdirSync(slices_path)) {
+    if (file.startsWith(".")) continue
+    App.i.fs.unlinkSync(App.i.path.join(slices_path, file))
+  }
 }
 
 App.download = function () {
@@ -69,10 +87,6 @@ App.download = function () {
       App.exit()
     }
   }
-}
-
-App.random_float = function (min, max) {
-  return parseFloat(Math.random() * (max - min + 1) + min.toFixed(1))
 }
 
 App.slice = function () {
@@ -136,20 +150,6 @@ App.render = function () {
   let file_name = `render/${Date.now()}_${App.id}.${App.ext}`
   App.i.execSync(`bash -c 'echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}'`)
   console.info(`Output saved in ${file_name}`)
-}
-
-App.cleanup = function () {
-  console.info("Cleaning up...")
-  let slices_path = App.get_path("slices")
-
-  for (let file of App.i.fs.readdirSync(slices_path)) {
-    if (file.startsWith(".")) continue
-    App.i.fs.unlinkSync(App.i.path.join(slices_path, file))
-  }
-}
-
-App.get_path = function (dir) {
-  return App.i.path.join(App.i.path.dirname(__filename), dir)
 }
 
 App.prepare()
