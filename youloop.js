@@ -57,7 +57,6 @@ App.i = {}
 App.i.fs = require("fs")
 App.i.path = require("path")
 App.i.execSync = require("child_process").execSync
-App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
 App.slices = {}
 
 App.exit = function () {
@@ -90,6 +89,7 @@ App.prepare = function () {
   }
 
   console.info(`ID: ${App.id}`)
+  App.instructions = App.i.fs.readFileSync(App.get_path("instructions.txt"), "utf8").trim().split("\n")  
 }
 
 App.get_cache = function () {
