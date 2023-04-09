@@ -25,6 +25,9 @@
 // rand rand
 // rand 3
 
+// max % is 9.9
+// max duration is 60
+
 // Then you just run this program
 // and it will read the instructions
 // create the slices and render the output
@@ -56,7 +59,6 @@ App.i.path = require("path")
 App.i.execSync = require("child_process").execSync
 App.instructions = App.i.fs.readFileSync("instructions.txt", "utf8").trim().split("\n")
 App.slices = {}
-App.slice_list = []
 
 App.exit = function () {
   process.exit(1)
@@ -91,16 +93,16 @@ App.prepare = function () {
 }
 
 App.get_cache = function () {
-  let files = App.i.fs.readdirSync("downloads/")
+  let downloads_path = App.get_path("downloads")
+  let files = App.i.fs.readdirSync(downloads_path)
   
   for (let file of files) {
     if (file.startsWith(App.id)) {
       if (file.endsWith(".part") || file.endsWith(".ytdl")) {
         return
       }
-      
-      let f = App.i.path.join("downloads/", file)
-      App.cache = App.i.path.join(App.i.path.dirname(__filename), f)
+
+      App.cache = App.i.path.join(downloads_path, file)
       App.ext = file.split(".").slice(-1)[0]
     }
   }  
@@ -114,10 +116,10 @@ App.download = function () {
   } 
   else {
     console.info("Downloading...")
-    App.i.execSync(`yt-dlp --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${App.id}`)
+    App.i.execSync(`bash -c 'yt-dlp --output "downloads/%(id)s.%(ext)s" https://www.youtube.com/watch?v=${App.id}'`)
     App.get_cache()
 
-    if (!App.cache) {
+    if (!App.cache || !App.ext) {
       App.exit()
     }
   }
@@ -129,8 +131,10 @@ App.random_float = function (min, max) {
 
 App.slice = function () {
   console.info("Creating slices...")
-  let total_duration = parseInt(App.i.execSync(`ffprobe ${App.cache} -show_format 2>&1 | sed -n 's/duration=//p'`))
+  let total_duration = parseInt(App.i.execSync(`bash -c "ffprobe ${App.cache} -show_format 2>&1 | sed -n 's/duration=//p'"`))
   let nslice = 1
+  let max_percentage = 9.9
+  let max_duration = 60
 
   for (let ins of App.instructions) {
     let instruction = ins.trim().toLowerCase()
@@ -140,22 +144,21 @@ App.slice = function () {
     }
 
     console.info(`Processing: ${instruction}`)
+
     let split = instruction.split(" ")
     let item1 = split[0].trim()
     let item2 = split[1].trim()
-    let percentage = item1 === "rand" ? App.random_float(0, 9) : parseFloat(split[0])
-    let duration = item2 === "rand" ? App.random_float(0.1, 5) : parseFloat(split[1])
+    let percentage = item1 === "rand" ? App.random_float(0, max_percentage) : Math.min(max_percentage, parseFloat(split[0]))
+    let duration = item2 === "rand" ? App.random_float(0.25, 10) : Math.min(max_duration, parseFloat(split[1]))
     let slice_id = `${percentage} - ${duration}`
     
     if (App.slices[slice_id]) {
       console.info("Reusing slice...")
-      App.slice_list.push(`slices/${App.slices[slice_id]}.${App.ext}`)
     } 
     else {
       let start_seconds
 
       if (percentage > 0) {
-        if (percentage > 9) percentage = 9
         start_seconds = total_duration * ((percentage * 10) / 100)
         start_seconds = parseFloat(start_seconds.toFixed(3))
       } 
@@ -164,9 +167,8 @@ App.slice = function () {
       }
 
       console.info(`Start: ${start_seconds} seconds | Duration: ${duration}`)
-      App.i.execSync(`ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -c copy -y slices/${nslice}.${App.ext}`)
+      App.i.execSync(`bash -c 'ffmpeg -loglevel error -ss ${start_seconds} -t ${duration} -i ${App.cache} -c copy -y slices/${nslice}.${App.ext}'`)
       App.slices[slice_id] = nslice
-      App.slice_list.push(`slices/${nslice}.${App.ext}`)
       nslice += 1
     }
   }
@@ -174,13 +176,13 @@ App.slice = function () {
 
 App.render = function () {
   console.info("Rendering...")
+
   let paths = []
-  
-  for (let file of App.i.fs.readdirSync("slices/")) {
+  let slices_path = App.get_path("slices")
+
+  for (let file of App.i.fs.readdirSync(slices_path)) {
     if (file.endsWith(App.ext)) {
-      let f = App.i.path.join("slices/", file)
-      f = App.i.path.join(App.i.path.dirname(__filename), f)
-      paths.push(f)
+      paths.push(App.i.path.join(slices_path, file))
     }
   }
 
@@ -192,13 +194,16 @@ App.render = function () {
 
 App.cleanup = function () {
   console.info("Cleaning up...")
-  
-  for (let file of App.i.fs.readdirSync("slices/")) {
+  let slices_path = App.get_path("slices")
+
+  for (let file of App.i.fs.readdirSync(slices_path)) {
     if (file.startsWith(".")) continue
-    let f = App.i.path.join("slices/", file)
-    f = App.i.path.join(App.i.path.dirname(__filename), f)
-    App.i.fs.unlinkSync(f)
+    App.i.fs.unlinkSync(App.i.path.join(slices_path, file))
   }
+}
+
+App.get_path = function (dir) {
+  return App.i.path.join(App.i.path.dirname(__filename), dir)
 }
 
 App.prepare()

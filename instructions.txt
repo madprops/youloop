@@ -1,5 +1,4 @@
+rand 2
 rand 3
-rand 3
-rand 3
-rand 3
+rand 2
 rand 3
