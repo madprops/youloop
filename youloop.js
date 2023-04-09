@@ -5,6 +5,8 @@ App.i.path = require("path")
 App.i.execSync = require("child_process").execSync
 App.slices = {}
 
+// Utils
+
 App.exit = function () {
   process.exit(1)
 }
@@ -38,6 +40,8 @@ App.get_cache = function () {
     }
   }  
 }
+
+// Main Functions
 
 App.prepare = function () {
   let url = process.argv[2]
@@ -152,6 +156,7 @@ App.render = function () {
   console.info(`Output saved in ${file_name}`)
 }
 
+// Start
 App.prepare()
 App.cleanup()
 App.download()
