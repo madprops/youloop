@@ -182,7 +182,7 @@ App.render = function () {
 
   let echo = paths.map(x => `file '${x}'`).join("\\n")
   let file_name = `render/${Date.now()}_${App.id}.${App.ext}`
-  App.i.execSync(`echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}`)
+  App.i.execSync(`bash -c 'echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}'`)
   console.info(`Output saved in ${file_name}`)
 }
 
