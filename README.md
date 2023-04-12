@@ -38,6 +38,8 @@ Sample instructions.txt:
 
 ---
 
+Durations can be 60 seconds or lower
+
 There is a special string "rand"
 
 which produces random % and/or durations:
@@ -50,9 +52,9 @@ rand rand
 
 rand 3
 
-max % is 9.9
+rand % is between 0 and 9.9
 
-max duration is 60
+rand duration is between 0.25 and 10
 
 Then you just run this program
 
