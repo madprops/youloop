@@ -1,5 +1,6 @@
-const App = {}; App.i = {}
+const App = {}
 
+App.i = {}
 App.i.fs = require(`fs`)
 App.i.path = require(`path`)
 App.i.execSync = require(`child_process`).execSync
