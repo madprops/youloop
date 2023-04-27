@@ -1,4 +1,6 @@
-rand 2
-rand 3
-rand 2
-rand 3
+rand 1
+rand 1
+rand 1
+rand 1
+rand 1
+rand 1
