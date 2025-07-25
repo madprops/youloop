@@ -51,15 +51,20 @@ App.prepare = () => {
     App.exit()
   }
 
-  if (url.length === 11) {
+  if (url.startsWith(`downloads/`)) {
     App.id = url
   }
   else {
-    App.id = App.get_youtube_id(url)
+    if (url.length === 11) {
+      App.id = url
+    }
+    else {
+      App.id = App.get_youtube_id(url)
 
-    if (!App.id) {
-      console.info(`Invalid YouTube video ID`)
-      App.exit()
+      if (!App.id) {
+        console.info(`Invalid YouTube video ID`)
+        App.exit()
+      }
     }
   }
 
@@ -78,7 +83,12 @@ App.cleanup = () => {
 }
 
 App.download = () => {
+  if (App.id.startsWith(`downloads/`)) {
+    App.id = App.id.split(`/`).slice(-1)[0]
+  }
+
   App.get_cache()
+  App.cache = App.clean_path(App.cache)
 
   if (App.cache) {
     console.info(`Using cache...`)
@@ -151,10 +161,17 @@ App.render = () => {
     }
   }
 
-  let echo = paths.map(x => `file '${x}'`).join(`\\n`)
+  let echo = paths.map(x => `file '${App.clean_path(x)}'`).join(`\\n`)
   let file_name = `render/${Date.now()}_${App.id}.${App.ext}`
   App.i.execSync(`bash -c 'echo -e "${echo}" | ffmpeg -loglevel error -f concat -safe 0 -i /dev/stdin -c copy -y ${file_name}'`)
   console.info(`Output saved in ${file_name}`)
+}
+
+App.clean_path = (path) => {
+  path = path ? path.replace(/ /g, `\\ `) : null
+  path = path ? path.replace(/\(/g, `\\(`) : null
+  path = path ? path.replace(/\)/g, `\\)`) : null
+  return path
 }
 
 // Start
